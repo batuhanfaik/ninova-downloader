@@ -7,7 +7,7 @@ import requests
 
 '''Base URL'''
 url = 'https://ninova.itu.edu.tr'
-overwrite = False
+overwrite = 'n'
 
 
 def login(s, username, password):
@@ -81,21 +81,30 @@ def createDir(classTag, rootFolder):
                                 sanitizePath(classTag.findNext('span').text)
                                 )
     global overwrite
-    if not overwrite:
+    if overwrite != 'y':
         '''Try creating a new folder'''
         try:
-            os.mkdir(path)
+            os.makedirs(path)
 
         except FileExistsError:
             '''If folder exists, create a new one'''
             print('Folder already exists "' + path + '"')
             path = path + '_duplicate'
-            os.mkdir(path)
+            os.makedirs(path)
 
-        '''Create the necessary subfolders'''
-        os.mkdir(path + os.sep + 'dersDosyalari')
-        os.mkdir(path + os.sep + 'sinifDosyalari')
-        os.mkdir(path + os.sep + 'odevKaynakDosyalari')
+    '''Create the necessary subfolders'''
+    try:
+        os.makedirs(path + os.sep + 'dersDosyalari')
+    except FileExistsError:
+        pass
+    try:
+        os.makedirs(path + os.sep + 'sinifDosyalari')
+    except FileExistsError:
+        pass
+    try:
+        os.makedirs(path + os.sep + 'odevKaynakDosyalari')
+    except FileExistsError:
+        pass
 
     return path
 
@@ -110,7 +119,7 @@ def capturePage(session, resourceTagList, rootFolder):
 
             subFolder = rootFolder + os.sep + sanitizePath(tag.text)
             if not os.path.exists(subFolder):
-                os.mkdir(subFolder)
+                os.makedirs(subFolder)
 
             soup = getPage(session, url + tag['href'])
             links = getLinks(soup, 'Dosyalari?g')
@@ -157,7 +166,7 @@ def captureClass(session, classTag, rootFolder):
         path = '{}{}{}{}{}'.format(newRoot, os.sep, 'odevKaynakDosyalari', os.sep,
                                    id + '_' + sanitizePath(homeworkName))
         if not os.path.exists(path):
-            os.mkdir(path)
+            os.makedirs(path)
         capturePage(session, links, path)
 
 
@@ -197,17 +206,13 @@ def run():
             if item.find('{}_{}'.format('ninova', username)) != -1:
                 existing_ninova = True
                 print("The user " + username + " already has a Ninova folder")
-                overwrite_input = input(
+                overwrite = input(
                     "Do you want to update the existing\n{} folder (y/n): ".format(item))
-                if overwrite_input == 'y':
-                    overwrite = True
-                else:
-                    overwrite = False
                 existing_path = item
                 break
         break
 
-    if existing_ninova and overwrite:
+    if existing_ninova and overwrite == 'y':
         rootFolder = existing_path
         newRootName = './{}_{}_{}'.format('ninova',
                                           username,
@@ -220,13 +225,13 @@ def run():
                                          datetime.datetime.now().strftime('%d-%m-%y_%kH:%M:%S')
                                          )
         try:
-            os.mkdir(rootFolder)
+            os.makedirs(rootFolder)
         except OSError:
             rootFolder = rootFolder + '_duplicate'
             # How can one manage starting a code twice in a sec
             # but errors can happen so we need to handle
             print('Duplicate folder created.')
-            os.mkdir(rootFolder)
+            os.makedirs(rootFolder)
             return
 
     '''Capture parsed classes'''
@@ -234,7 +239,7 @@ def run():
         captureClass(s, link, rootFolder)
 
     # Once all the downloads are done, merge old ninova with the new one
-    if existing_ninova and overwrite:
+    if existing_ninova and overwrite == 'y':
         os.rename(f'{existing_path}', f'{newRootName}')
         print("Updating finished.")
 
