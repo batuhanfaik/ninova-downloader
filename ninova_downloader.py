@@ -1,6 +1,8 @@
 import datetime
 import getpass
+import multiprocessing
 import os
+import threading
 
 import bs4
 import requests
@@ -111,31 +113,37 @@ def createDir(classTag, rootFolder):
 
 def capturePage(session, resourceTagList, rootFolder):
     '''Iterate through tags'''
+    threads = list()
     for tag in resourceTagList:
+        x = threading.Thread(target=downloadTag, args=(tag, session, resourceTagList, rootFolder))
+        threads.append(x)
+        x.start()
 
-        '''Check for the icon, if it is a folder, create the subfolder,
-            and enter, then call capturePage for the subfolder page'''
-        if tag.findPrevious('img')['src'] == '/images/ds/folder.png':
+    for x in threads:
+        x.join()
 
-            subFolder = rootFolder + os.sep + sanitizePath(tag.text)
-            if not os.path.exists(subFolder):
-                os.makedirs(subFolder)
+def downloadTag(tag, session, resourceTagList, rootFolder):
+    '''Check for the icon, if it is a folder, create the subfolder,
+        and enter, then call capturePage for the subfolder page'''
+    if tag.findPrevious('img')['src'] == '/images/ds/folder.png':
 
-            soup = getPage(session, url + tag['href'])
-            links = getLinks(soup, 'Dosyalari?g')
+        subFolder = rootFolder + os.sep + sanitizePath(tag.text)
+        if not os.path.exists(subFolder):
+            os.makedirs(subFolder)
 
-            capturePage(session, links, subFolder)
+        soup = getPage(session, url + tag['href'])
+        links = getLinks(soup, 'Dosyalari?g')
 
-        elif tag.findPrevious('img')['src'] == '/images/ds/link.png':
-            '''If the icon is a link, dont touch it'''
-            continue
+        capturePage(session, links, subFolder)
 
-        else:
-            '''Download the rest'''
-            r = session.get(url + tag['href'])
-            name = rootFolder + os.sep + sanitizePath(tag.text)
-            if not os.path.exists(rootFolder + os.sep + sanitizePath(tag.text)):
-                saveFile(r, name)
+    elif tag.findPrevious('img')['src'] == '/images/ds/link.png':
+        '''If the icon is a link, dont touch it'''
+    else:
+        '''Download the rest'''
+        r = session.get(url + tag['href'])
+        name = rootFolder + os.sep + sanitizePath(tag.text)
+        if not os.path.exists(rootFolder + os.sep + sanitizePath(tag.text)):
+            saveFile(r, name)
 
 
 def captureClass(session, classTag, rootFolder):
@@ -235,8 +243,15 @@ def run():
             return
 
     '''Capture parsed classes'''
+    processList = list()
     for link in classLinks:
-        captureClass(s, link, rootFolder)
+        processList.append(multiprocessing.Process(target=captureClass, args=(s, link, rootFolder)))
+
+    for x in processList:
+        x.start()
+
+    for x in processList:
+        x.join()
 
     # Once all the downloads are done, merge old ninova with the new one
     if existing_ninova and overwrite == 'y':
