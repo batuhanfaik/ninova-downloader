@@ -40,8 +40,15 @@ class AuthError(Exception):
 
 def getPage(session, url):
     '''GET the url'''
-    kampusPage = session.get(url)  # Code duplication for some reason
-    kampusPage = session.get(url)
+    kampusPage = ""
+    while not kampusPage:
+        try:
+            kampusPage = session.get(url)  # Code duplication for some reason
+            kampusPage = session.get(url)
+        except ConnectionError:
+            kampusPage = ""
+            continue
+
     unsuccessfullURLext = "ogrenci.default.aspx"
     if kampusPage.url.find(unsuccessfullURLext) != -1:
         raise AuthError
@@ -237,7 +244,6 @@ def run():
     if existing_ninova and overwrite:
         os.rename(f'{existing_path}', f'{newRootName}')
         print("Updating finished.")
-
 
 if __name__ == "__main__":
     run()
