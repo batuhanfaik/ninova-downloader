@@ -1,4 +1,4 @@
-# ninova-downloader
+# ninova-downloader-v2
 A tool to download lecture content from ITU's Ninova system. 
 
 ## Usage
