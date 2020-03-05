@@ -1,6 +1,8 @@
 # ninova-downloader-v2
 A tool to download lecture content from ITU's Ninova system. 
 
+**Expect a `ConnectionError` when using. The downloader functions _without any problem_ and will be fixed soon!**
+
 ## Usage
 To run, simply type
 
